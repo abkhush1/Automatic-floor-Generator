@@ -1,0 +1,212 @@
+<html>
+  <head>
+    <style>
+      #canvas {
+        border: 1px solid #333;
+      }
+
+      #plot {
+        float: left;
+        margin-left: 10px;
+        border: 1px solid #333;
+        width: 277px;
+        margin: 0px 15px 0px 25px;;
+        padding: 5px 5px 5px 5px;
+        height: 789px;
+      }
+
+      #container {
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="plot">
+       <div>
+         <span>
+           <h4>Plot Size</h4>
+           <!-- <label>Plot Size      </label> -->
+           <label>Length:</label> <input type="text" id="x" value="40" />
+           <label>Width:</label> <input type="text" id="y" value="30" />
+         </span>
+       </div>
+
+       <div>
+         <span>
+           <h4>BedRoom1</h4>
+           <label>Length:</label> <input type="text" id="BedRoom1_Length" value="12" />
+           <label>Width:</label> <input type="text" id="BedRoom1_Width" value="10" />
+         </span>
+       </div>
+
+       <div>
+         <span>
+           <h4>BedRoom2</h4>
+           <label>Length:</label> <input type="text" id="BedRoom2_Length" value="14" />
+           <label>Width:</label> <input type="text" id="BedRoom2_Width" value="12" />
+         </span>
+       </div>
+
+       <div>
+         <span>
+           <h4>EntranceHall</h4>
+           <label>Length:</label> <input type="text" id="EntranceHall_Length" value="14" />
+           <label>Width:</label> <input type="text" id="EntranceHall_Width" value="14" />
+         </span>
+       </div>
+       <div>
+         <span>
+           <h4>Kitchen</h4>
+           <label>Length:</label> <input type="text" id="kitchen_Length" value="10" />
+           <label>Width:</label> <input type="text" id="kitchen_Width" value="8" />
+         <span>
+       </div>
+       <div>
+         <span>
+           <h4>Common toilet</h4>
+           <label>Length:</label> <input type="text" id="CommonToilet_Length" value="7" />
+           <label>Width:</label> <input type="text" id="CommonToilet_Width" value="5" />
+         </span>
+       </div>
+       <div>
+         <span>
+           <h4>Attached toilet </h4>
+           <label>Length:</label> <input type="text" id="AttachedToilet_Length" value="6" />
+           <label>Width:</label> <input type="text" id="AttachedToilet_Width" value="4" />
+         </span>
+ 	     </div>
+      <br />
+         <input id="add" type="submit" value="Update dimensions"/>
+         <input id="rebuild" type="submit" value="Rebuild tree">
+
+     </div>
+       <canvas id="canvas" width=600 height=800></canvas>
+
+       <p>Balance factor: <span id="factor">1</span></p>
+    </div>
+
+
+    <script src="./jquery-1.7.2.min.js"></script>
+    <script src="../kdTree.js"></script>
+    <script>
+      var tree, canvas, ctx;
+
+      // var y_input=[$("#EntranceHall_Length").val(), $("#kitchen_Length").val(), $("#BedRoom1_Length").val(),$("#BedRoom2_Length").val(),$("#CommonToilet_Length").val(),$("#AttachedToilet_Length").val()];
+      // var x_input=[$("#EntranceHall_Width").val(), $("#kitchen_Width").val(), $("#BedRoom1_Width").val(),$("#BedRoom2_Width").val(),$("#CommonToilet_Width").val(),$("#AttachedToilet_Width").val()];
+      // var xpoint = [EntranceHall_Length/Length_plot, kitchen_Length/Length_plot, BedRoom1_Length/Length_plot, BedRoom2_Length/Length_plot];
+      // var ypoint = [EntranceHall_Width/Width_plot,kitchen_Width/Width_plot, BedRoom1_Width/Width_plot, BedRoom2_Width/Width_plot];
+      var canvas_length=800;
+      var canvas_width=600;
+      function distance(a, b) {
+        var dx = a.x - b.x;
+        var dy = a.y - b.y;
+        return dx*dx + dy*dy;
+      }
+
+      function renderTree() {
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+        render(tree.root, [[0, canvas.width], [0, canvas.height]]);
+        $("#factor").text(tree.balanceFactor());
+
+        function render(node, bounds) {
+          if(node == null) return;
+
+          ctx.beginPath();
+          ctx.fillStyle = "blue";
+          // ctx.fillStyle = "#00f";
+          ctx.beginPath();
+          ctx.arc(node.obj.x, node.obj.y, 5, 0, Math.PI*2);
+          ctx.closePath();
+          ctx.fill();
+
+          var leftBounds = [];
+          leftBounds[0] = bounds[0].slice(0);
+          leftBounds[1] = bounds[1].slice(0);
+
+          var rightBounds = [];
+          rightBounds[0] = bounds[0].slice(0);
+          rightBounds[1] = bounds[1].slice(0);
+
+          ctx.beginPath();
+          if(node.dimension == 0) { // was split on x value
+            ctx.moveTo(node.obj.x, bounds[1][0]);
+            ctx.lineTo(node.obj.x, bounds[1][1]);
+            leftBounds[0][1] = node.obj.x;
+            rightBounds[0][0] = node.obj.x;
+          } else {
+            ctx.moveTo(bounds[0][0], node.obj.y);
+            ctx.lineTo(bounds[0][1], node.obj.y);
+            leftBounds[1][1] = node.obj.y;
+            rightBounds[1][0] = node.obj.y;
+          }
+          ctx.closePath();
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(255,0,0,0.2)";
+          ctx.fillRect(bounds[0][0], bounds[1][0], bounds[0][1]-bounds[0][0], bounds[1][1]-bounds[1][0]);
+
+          render(node.left, leftBounds);
+          render(node.right, rightBounds);
+        }
+      }
+
+      $(function(){
+        canvas = $("#canvas")[0];
+        ctx = canvas.getContext('2d');
+
+        tree = new kdTree([], distance, ["x", "y"]);
+
+        $("#add").click(function(){
+
+          var y_input=[$("#EntranceHall_Length").val(), $("#kitchen_Length").val(), $("#BedRoom1_Length").val(),$("#BedRoom2_Length").val(),$("#CommonToilet_Length").val(),$("#AttachedToilet_Length").val()];
+          var x_input=[$("#EntranceHall_Width").val(), $("#kitchen_Width").val(), $("#BedRoom1_Width").val(),$("#BedRoom2_Width").val(),$("#CommonToilet_Width").val(),$("#AttachedToilet_Width").val()];
+          var points = [];
+          var xpoint=[];
+          var ypoint=[];
+
+  var i,j;
+  for (j=0;j<6;j++){
+    if(j===0){
+    ypoint[j]=parseInt(y_input[0]);
+    xpoint[j]=parseInt(x_input[0]);
+  } else if(j===1){
+    ypoint[j]= parseInt(y_input[1]) + parseInt(y_input[0]);
+    xpoint[j]=parseInt(x_input[1]);
+  }else if (j===2){
+    ypoint[j]= parseInt(y_input[1]) + parseInt(y_input[0])+parseInt(y_input[2]);
+    xpoint[j]=parseInt(x_input[2]);
+  }else if (j===3){
+    ypoint[j]= parseInt(y_input[3]);
+    xpoint[j]=parseInt(x_input[0])+ parseInt(x_input[3]);
+  }else if (j===4){
+    ypoint[j]= parseInt(y_input[3])+ parseInt(y_input[4]);
+    xpoint[j]=parseInt(x_input[0]+ x_input[4]);
+  }else if (j===5){
+    ypoint[j]= parseInt(y_input[3]) + parseInt(y_input[5]);
+    xpoint[j]=parseInt(x_input[0]) + parseInt(x_input[4])+ parseInt(x_input[5]);
+  }
+  }
+		for(i=0;i <xpoint.length;i++){
+          var point = {
+            // x: xpoint[i]*canvas.width,
+            // y: ypoint[i]*canvas.height
+            x: xpoint[i]*20,
+            y: ypoint[i]*20
+			//x: Math.random()*canvas.width,
+            //y: Math.random()*canvas.height
+          };
+          points.push(point);
+          tree.insert(point);
+          renderTree();
+		  }
+        });
+
+        $("#rebuild").click(function(){
+          tree = new kdTree(points, distance, ["x", "y"]);
+          renderTree();
+        });
+      });
+    </script>
+  </body>
+</html>
